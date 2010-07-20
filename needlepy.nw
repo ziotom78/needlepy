@@ -1,0 +1,279 @@
+% -*- mode: Noweb; noweb-code-mode: python-mode -*-
+
+% This is a Noweb file describing and providing the implementation of NeedlePy,
+% a needlet library.
+%
+% You can either extract a LaTeX document describing the code or the code
+% itself from this file by using "noweave" or "notangle". It is better however
+% to use the Makefile provided with this distribution, as it uses the
+% appropriate command line switches for each command.
+%
+% Author: Maurizio Tomasi, 2010
+
+\documentclass[a4paper,10pt,twoside]{article}
+\usepackage{a4wide}
+\usepackage{amsmath}
+\usepackage{noweb}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{ccaption}
+\usepackage{textcomp}
+\usepackage{titlesec}
+\usepackage{mathpazo}
+\usepackage[round]{natbib}
+
+\hyphenation{Needle-Py}
+
+% Command used to indicate a section
+\newcommand{\sectmark}{\S\ }
+
+\titleformat{\section}[block]
+  {\centering\normalfont\bfseries}
+  {\sectmark\thesection.}{.5em}{}
+\titleformat{\subsection}[runin]
+  {\normalfont\bfseries}
+  {\thesubsection.}{.5em}{}[. ]
+\titleformat{\subsubsection}[runin]
+  {\normalfont\bfseries}
+  {}{.2em}{}[. ]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\sectionmark}[1]{%
+  \markright{\thesection.\ #1}}
+\fancyhf{}
+\fancyhead[L,RO]{\bfseries\thepage}
+\fancyhead[LO]{\bfseries\rightmark}
+\fancyhead[RE]{\bfseries\leftmark}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\captionnamefont{\small\bfseries}
+\captiontitlefont{\small\itshape}
+
+\hypersetup{pdftitle={NeedlePy},
+pdfauthor={Maurizio Tomasi, Andrea Zonca},
+pdfsubject={Commented implementation of the NeedlePy library},
+pdfkeywords={CMB {data analysis} {needlets}},
+pdfborder={0 0 0}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\NeedlePy}{NeedlePy}
+
+\newcommand{\ud}{\mathrm{d}}
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\vers}[1]{\mathbf{\hat{#1}}}
+
+\begin{document}
+
+\bibliographystyle{plainnat}
+
+\title{\NeedlePy}
+\author{M.~Tomasi, A.~Zonca}
+\maketitle
+
+\begin{abstract}
+This document describes the implementation of \NeedlePy{}, a needlet library
+written in Python.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+
+\section{Implementation of the window function}
+
+\Citet{2007MarinucciNeedletsAndCMB} introduce a practical approach to use
+needlets for CMB data analysis. Unfortunately, the window function $b^2(\cdot)$
+is built using the non-analytic function $f(t)$, and it involves the
+calculation of non-algebraic integrals. To allow for a fast implementation, we
+are therefore looking for polynomial approximations of $b$.
+
+Let us recall the steps required to build the window function $b^2(\cdot)$,
+while at the same time underlying any numerical issue each step might pose:
+\begin{enumerate}
+\item Define
+\begin{equation}
+f(t) := \begin{cases}
+\exp \left(\frac{1}{1 - t^2}\right), & t \in [-1, 1], \\
+0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+Such function is $C^\infty$, but it is not analytic around points $t = \pm 1$,
+because $f^{(n)} (\pm 1) = 0 \forall n$. Therefore, such function cannot be
+approximated by Taylor series over the interval $[-1, 1]$.
+
+\item Define
+\begin{equation}
+\label{eq:psi}
+\psi (u) := \frac{\int_{-1}^u f(t)\,\ud t}{\int_{-1}^1 f(t)\,\ud t}.
+\end{equation}
+Such function requires the evaluation of an integral which has no algebraic
+form. Therefore, numerical integration algorithms must be implemented. The
+denominator has the following value (truncated to 18 digits):
+\begin{equation}
+K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
+\end{equation}
+
+\item Define
+\begin{equation}
+\varphi_B (t) := \begin{cases}
+1, & t \in \left[0, \frac1B\right], \\
+\psi\left(1 - \frac{2B}{B-1} \left(t - \frac1B\right)\right), & t \in \left(\frac1B, 1\right), \\
+0, & t > 1.
+\end{cases}
+\end{equation}
+for $B > 0$.
+
+\item Define the window function $b^2 (\cdot)$:
+\begin{equation}
+b^2 (\xi) = \varphi \left(\frac{\xi}B\right) - \varphi(\xi).
+\end{equation}
+\end{enumerate}
+
+A good place to start is to look for Pad\'e approximant of $\psi(u)$ in
+eq.~\eqref{eq:psi}, because this allows (1) to avoid estimating the integral in
+equation \eqref{eq:psi} for each value of $u$ we are interested, and (2) to
+compute ratios of polynomials instead of complex functions involving
+exponentials. We also exploit the following mathematical properties of
+$\psi(u)$:
+\begin{align}
+\psi(-1) &= 0, \\
+\psi(1)  &= 1, \\
+\label{eq:psiParity}
+\psi\bigl(-\left|u\right|\bigr) &= 1 - \psi\bigl(\left|u\right|\bigr).
+\end{align}
+
+We derive the Pad\'e approximant $[15/13]_\psi (u)$ around $u = \frac12$:
+\begin{equation}
+[15/13]_\psi (u) = \frac{\sum_{j=0}^{15} p_j \left(u +
+\frac12\right)^j}{\sum_{k=0}^{13} q_k \left(u + \frac12\right)^k}
+\end{equation}
+Such approximation shows an error less than $10^{-10}$ over the interval
+$(-1,0)$. The following code\footnote{Note that, according to
+[[numpy.polyval]]'s conventions, we must define the coefficients starting from
+the highest power, i.e.\ from $p_{15}$ down to $p_0$.} defines the Pad\'e
+coefficients (calculated using Wolfram Mathematica):
+<<Private definitions>>=
+_PSI_P_COEFFICIENTS = np.array ([ 1.53806494e-02,  2.11878794e+00,
+				  8.68248114e+00, -2.73247054e+01,
+				 -1.95778498e+02, -2.36268037e+02,
+				  4.92284220e+02,  1.44860574e+03,
+				  6.40977708e+02, -1.72192064e+03,
+				 -2.39743866e+03, -4.56872616e+02,
+				  1.26530363e+03,  1.16708244e+03,
+				  4.17423819e+02,  5.60491023e+01])
+
+_PSI_Q_COEFFICIENTS = np.array([ 1.00000000e+00,  3.74664578e+00,
+                                -2.03352122e+01, -1.14974437e+02,
+                                -7.31972675e+01,  4.86587771e+02,
+			         9.31202485e+02, -1.24912994e+02,
+			        -1.76891510e+03, -1.39529395e+03,
+			         5.06952477e+02,  1.25854087e+03,
+			         6.49085479e+02,  1.12098205e+02])
+@ %def _PSI_P_COEFFICIENTS _PSI_Q_COEFFICIENTS
+
+Then, we use eq.~\eqref{eq:psiParity} to naturally extend our approximation
+over the $[-1,1]$ domain:
+
+<<Definition of [[psi]]>>=
+def psi(u):
+    neg_u = -np.abs (u)
+    value =   np.polyval (_PSI_P_COEFFICIENTS, neg_u) \
+	    / np.polyval (_PSI_Q_COEFFICIENTS, neg_u)
+
+    if np.isscalar (u):
+	if u == -1.0:
+	    return 0.0
+	elif u == 1.0:
+	    return 1.0
+	elif u > 0.0:
+	    return 1.0 - value
+	else:
+	    return value
+    else:
+	u = np.array (u)  # Ensure that "u" is of the proper type
+	result = np.where (u > 0.0, 1 - value, value)
+	result[u == -1.0] = 0.0
+	result[u == +1.0] = 1.0
+
+	return result
+@ %def psi
+
+We now define a test case which checks the correctness of the implementation of
+[[phi]]:
+<<Test cases>>=
+class TestPhi (unittest.TestCase):
+    def test_notable_points (self):
+	self.assertAlmostEqual (psi (-1.0), 0.0)
+	self.assertAlmostEqual (psi ( 0.0), 0.5)
+	self.assertAlmostEqual (psi (+1.0), 1.0)
+
+    def test_vectorial (self):
+	u = [-1.0, 0.0, 1.0]
+	self.assertTrue (np.allclose (psi (u), [0.0, 0.5, 1.0]))
+
+    def test_sparse_points (self):
+	u        = [-0.606531, -0.31831, 0.367879, 0.56419]
+	expected = [0.0663502, 0.245443, 0.790487, 0.912829]
+	self.assertTrue (np.allclose (psi (u), expected))
+
+    def test_borders (self):
+	# We must ensure that psi is increasing at the borders
+	p = psi (np.arange (-1.0, -0.9, 0.01))
+	print p[1:p.size-1] - p[0:p.size-2]
+	self.assertTrue (np.alltrue (p[1:p.size-1] - p[0:p.size-2] > 0.0))
+
+	p = psi (np.arange (0.9, 1.0, 0.01))
+	print p[1:p.size-1] - p[0:p.size-2]
+	self.assertTrue (np.alltrue (p[1:p.size-1] - p[0:p.size-2] > 0.0))
+@ %def TestPhi
+
+\section{The main program}
+
+This is the incarnation of the main program. It is used to test the goodness of
+the implementation by means of a number of unit tests:
+
+<<*>>=
+#!/usr/bin/env python
+
+import numpy as np
+import unittest
+import sys
+
+<<Private definitions>>
+
+<<Definition of [[psi]]>>
+
+<<Test cases>>
+
+for x in np.arange (-1.0, 1.0, 0.05):
+    print x, psi (x)
+
+#if __name__ == "__main__":
+#    unittest.main ()
+@
+
+\appendix
+
+\section{Index of symbols}
+
+Here we provide a list of the symbols used in the code. Each reference is of
+the form \texttt{nL}, where \texttt{n} is the number of the page and \texttt{L}
+a letter specifying the code chunk within that page starting from ``a''.
+Underlined references point to the definition of the symbol.
+
+\nowebindex
+
+\bibliography{needlepy}
+\end{document}
