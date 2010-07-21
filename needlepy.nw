@@ -72,7 +72,7 @@ pdfborder={0 0 0}}
 
 \newcommand{\ud}{\mathrm{d}}
 \newcommand{\vect}[1]{\mathbf{#1}}
-\newcommand{\vers}[1]{\mathbf{\hat{#1}}}
+\newcommand{\vers}[1]{\hat{#1}}
 
 \begin{document}
 
@@ -91,14 +91,30 @@ written in Python.
 
 \section{Introduction}
 
-\Citet{2008MarinucciNeedletsAndCMB} introduce a practical approach to use
-needlets for CMB data analysis. Unfortunately, the window function $b^2(\cdot)$
-is built using the non-analytic function $f(t)$, and it involves the
-calculation of non-algebraic integrals. To allow for a fast implementation, we
-are therefore looking for polynomial approximations of $b$.
+Needlets have been introduced by \citet{2006NarcowichNeedlets} as a powerful
+tool for the analysis of spherical random fields. They can be seen as the
+analogous of wavelets over a $\mathbb{S}^n$ field (a $n$-dimensional sphere),
+as they implement a way of decomposing signals into a set of functions (called
+``needlets'') which are well localized both in pixel and harmonic space. The
+most important result in needlet theory is summed up by \textit{Proposition 1}
+in \citet{2009BaldiNeedlets}, which says (1) that needlets implement a
+\emph{tight frame} over $\mathbb{S}^n$ (i.e.\ a set of function which shares
+many properties with orthonormal bases), and (2) that such frame has the
+localization properties mentioned above.
 
-Let us recall the steps required to build the window function $b^2(\cdot)$,
-while at the same time underlying any numerical issue each step might pose:
+\Citet{2008MarinucciNeedletsAndCMB} introduced a practical approach to employ
+needlets for CMB data analysis. Such approach rotates around the definition of a
+so-called \emph{window function} $b(\cdot)$, which allows to apply the needlet
+transformation directly in the harmonic space. Unfortunately, the window
+function $b^2(\cdot)$ is built using the non-analytic function $f(t)$, and it
+involves the calculation of non-algebraic integrals, and it therefore
+complicates any numerical implementation of the needlet concept.
+
+This document discusses the implementation of a fast Python library for the
+estimation of needlet transformations for Healpix maps following the articles
+cited above.  First of all, let us recall the steps required to build the
+window function $b(\cdot)$, while at the same time underlying any numerical
+issue each step might pose:
 \begin{enumerate}
 \item Define
 \begin{equation}
@@ -107,8 +123,8 @@ f(t) := \begin{cases}
 0, & \text{otherwise}.
 \end{cases}
 \end{equation}
-Such function is $C^\infty$, but it is not analytic around points $t = \pm 1$,
-because $f^{(n)} (\pm 1) = 0 \forall n$. Therefore, such function cannot be
+Note that $f$ is $C^\infty$, but it is not analytic around points $t = \pm 1$,
+because $f^{(n)} (\pm 1) = 0\ \forall n$. Therefore, such function cannot be
 approximated by Taylor series over the interval $[-1, 1]$.
 
 \begin{figure}[tbf]
@@ -122,10 +138,11 @@ approximated by Taylor series over the interval $[-1, 1]$.
 \label{eq:psi}
 \psi (u) := \frac{\int_{-1}^u f(t)\,\ud t}{\int_{-1}^1 f(t)\,\ud t}.
 \end{equation}
-The behavior of $\psi(u)$ is shown in fig.~\ref{fig:psi}. Such function
-requires the evaluation of an integral which has no algebraic form. Therefore,
-numerical integration algorithms must be implemented. The denominator has the
-following value (truncated to 18 digits):
+The fact that $\psi \in C^\infty$ derives from the same property for $f$. The
+behavior of $\psi(u)$ is shown in fig.~\ref{fig:psi}. Such function requires
+the evaluation of an integral which has no algebraic form. Therefore, numerical
+integration algorithms must be implemented. The denominator has the following
+value (truncated to 18 digits):
 \begin{equation}
 K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
 \end{equation}
@@ -138,6 +155,7 @@ K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
 
 \item Define
 \begin{equation}
+\label{eq:phi}
 \varphi_B (t) := \begin{cases}
 1, & t \in \left[0, \frac1B\right], \\
 \psi\left(1 - \frac{2B}{B-1} \left(t - \frac1B\right)\right), & t \in
@@ -146,23 +164,53 @@ K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
 \end{equation}
 for $B > 0$. The behavior of $\varphi_B (t)$ is shown in fig.~\ref{fig:phi}.
 
-\item Define the window function $b^2 (\cdot)$:
+\begin{figure}
+    \centering
+    \includegraphics{b.pdf}
+    \caption{\label{fig:b} Graph of $b (\ell / B^j)$ for $j = 5$. The two plots
+refer to two different values of $B$: it is evident that such parameter makes
+$b$ ``pick'' different regions in the harmonic space.}
+\end{figure}
+
+\item Define the window function $b (\cdot)$ such that
 \begin{equation}
-b^2 (\xi) = \varphi_B \left(\frac{\xi}B\right) - \varphi_B(\xi).
+\label{eq:b}
+b^2 (\xi) := \varphi_B \left(\frac{\xi}B\right) - \varphi_B(\xi).
 \end{equation}
 \end{enumerate}
 
-Once $b^2 (\cdot)$ has been defined, the random needlets coefficients of a
-scalar field in the harmonic domain $\{a_{\ell m}\}_{\ell,m}$ is given by
+Once $b (\cdot) = \sqrt{\bigl(b^2 (\cdot) \bigr)}$ (i.e.\ we take the plus
+sign) has been defined, the random needlets coefficients of a scalar field in
+the harmonic domain $\{a_{\ell m}\}_{\ell m}$ is given by
 \begin{equation}
+\label{eq:needletTransformation}
 \beta_{jk} = \sqrt{\lambda_{jk}} \sum_\ell b\left(\frac\ell{B^j}\right)
 \sum_{m=-\ell}^\ell a_{\ell m} Y_{\ell m} (\xi_{jk}),
 \end{equation}
 where $\{\xi_{jk}\}$ is a set of \emph{cubature points}, and it is usually
-taken to be the center of each pixel in an Healpix map.
+taken to be the center of each pixel in an Healpix map. When working with
+Healpix maps, the $j$ index conventionally refers to a given \texttt{NSIDE}
+parameter, while $k$ is the pixel number, running from 0 to $12 \times
+\mathtt{NSIDE}^2 - 1$.
+
+Eq.~\eqref{eq:needletTransformation} is the convolution of a spherical field
+$T$ (represented by the set of $a_{\ell m}$) with the window function. This
+means that in pixel space the equation can be written as
+\begin{equation}
+\beta_{jk} = \int_{\mathbf{S}^2} T (\vers{\gamma}) \psi_{jk}
+(\vers{\gamma})\,\ud\Omega,
+\end{equation}
+where $\psi_{jk}$ are the needlet:
+\begin{equation}
+\psi_{jk} (\vers{\gamma}) = \sqrt{\lambda_{jk}} \sum_\ell
+b\left(\frac\ell{B^j}\right) \sum_{m = -\ell}^\ell Y_{lm}^* (\vers{\gamma})
+Y_{lm} (\xi_{jk}).
+\end{equation}
 
 
-\section{Implementation of the mother needlet}
+\section{Numerical implementation of the base functions}
+
+\subsection{Estimating $\psi$}
 
 A good place to start implementing \NeedlePy{} is to look for a cubic spline
 interpolation of $\psi(u)$ in eq.~\eqref{eq:psi}.  This kind of approximation
@@ -177,7 +225,7 @@ to limit the domain where to look for the interpolation.
 
 We use Wolfram Mathematica's \texttt{NIntegrate} to calculate the value of
 $\psi(u)$ over an uniform set of points in $[-1 - \varepsilon, 0 +
-\varepsilon]$, where $\varepsilon = 0.05$ is the spacing between consecutive
+\varepsilon]$, where $\varepsilon = 0.01$ is the spacing between consecutive
 points\footnote{Slightly exceeding the $[-1, 0]$ range allows to model the
 behavior of $\psi(u)$ near the points $u = -1$ and $u = 0$ more accurately.},
 and use such points in [[scipy.interpolate.splrep]]. The following code defines
@@ -281,14 +329,15 @@ class TestPsi (unittest.TestCase):
 @ %def TestPsi
 
 
-\subsection{Implementation of the window function}
+\subsection{Estimation of $\varphi$}
 
 As for [[psi]], we use the [[numpy.clip]] function in the definition of [[phi]]
-to properly take care of the regions outside $[1/B, 1]$:
+($\varphi$, eq.~\ref{eq:phi}) to properly take care of the regions outside
+$[1/B, 1]$:
 <<Definition of [[phi]]>>=
 def phi (t, B):
     invB = 1.0/B
-    # Ensure that "t" is of the correct type
+    # Ensure that "t" is of the correct type
     if not np.isscalar (t): t = np.array (t)
     val = np.clip (1 - 2*B/(B - 1) * (t - invB), -1.0, 1.0)
     return psi (val)
@@ -316,10 +365,33 @@ class TestPhi (unittest.TestCase):
     def test_vectorial (self):
 	u = [0.0, 0.2, 1.0]
 	self.assertTrue (np.allclose (phi (u, 5.0), [1.0, 1.0, 0.0]))
+
+    def test_sign (self): # This is crucial for the definition of "b"
+	u = np.arange (0.0, 1.0, 0.05)
+	self.assertTrue (np.all (phi (u, 2.0) >= 0.0))
+	self.assertTrue (np.all (phi (u, 3.0) >= 0.0))
+	self.assertTrue (np.all (phi (u, 4.5) >= 0.0))
 @ %def TestPhi
 Note that we do not check for ``sparse'' points as we did in [[TestPsi]], since
 we assume that the implementation of [[psi]] (upon which [[phi]] is based) has
 already passed all the tests.
+
+
+\subsection{Estimation of the window function}
+
+After having implemented [[phi]], the implementation of [[window_function]]
+($b$, eq.~\ref{eq:b}) is straightforward:
+<<Definition of [[window_function]]>>=
+def window_function (u, B):
+    return np.sqrt (np.clip (phi (u / B, B) - phi (u, B), 0.0, 5.0))
+@ %def window_function
+
+
+\section{The needlet transformation}
+
+Using eq.~\eqref{eq:needletTransformation} and the HealPy function
+[[healpy.alm2signal]] we are now able to estimate the needlet transformation
+for a given Healpix map.
 
 
 \section{The main program}
@@ -332,6 +404,7 @@ the implementation by means of a number of unit tests:
 
 import numpy as np
 import scipy.interpolate
+import scipy.special
 import unittest
 import sys
 
@@ -339,6 +412,7 @@ import sys
 
 <<Definition of [[psi]]>>
 <<Definition of [[phi]]>>
+<<Definition of [[window_function]]>>
 
 <<Test cases>>
 

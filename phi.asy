@@ -11,8 +11,8 @@ real[] y = a[1];
 
 draw (graph (x, y, join=operator ..), linewidth (1bp));
 
-xaxis ("$t$", xmin = 0, xmax = 1.1, Ticks ("%", step = 1, Step = 1));
-yaxis ("$\varphi(t)$", ymin = 0, ymax = 1.1, Ticks ("%", step = 1, Step = 1));
+xaxis ("$t$", xmin = 0, xmax = 1.1, Ticks ("%", step = 1, Step = 1), Arrow ());
+yaxis ("$\varphi(t)$", ymin = 0, ymax = 1.1, Ticks ("%", step = 1, Step = 1), Arrow ());
 
 real invB = 1.0/3.0;
 

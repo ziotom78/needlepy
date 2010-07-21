@@ -11,8 +11,8 @@ real[] y = a[1];
 
 draw (graph (x, y, join=operator ..), linewidth (1bp));
 
-xaxis ("$t$", xmin = -1, xmax = 1, Ticks ("%", step = 1, Step = 1));
-yaxis ("$\psi(t)$", ymin = 0, ymax = 1.0, Ticks ("%", step = 0.5, Step = 0.5));
+xaxis ("$t$", xmin = -1, xmax = 1.1, Ticks ("%", step = 1, Step = 1), Arrow ());
+yaxis ("$\psi(t)$", ymin = 0, ymax = 1.1, Ticks ("%", step = 0.5, Step = 0.5), Arrow ());
 
 draw ((0, 1) -- (1, 1), dashed);
 labelx ("$O$", 0, SW);
