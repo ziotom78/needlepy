@@ -91,9 +91,7 @@ written in Python.
 
 \section{Introduction}
 
-\section{Implementation of the window function}
-
-\Citet{2007MarinucciNeedletsAndCMB} introduce a practical approach to use
+\Citet{2008MarinucciNeedletsAndCMB} introduce a practical approach to use
 needlets for CMB data analysis. Unfortunately, the window function $b^2(\cdot)$
 is built using the non-analytic function $f(t)$, and it involves the
 calculation of non-algebraic integrals. To allow for a fast implementation, we
@@ -132,21 +130,39 @@ following value (truncated to 18 digits):
 K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
 \end{equation}
 
+\begin{figure}
+    \centering
+    \includegraphics{phi.pdf}
+    \caption{\label{fig:phi} Graph of $\varphi_B (t)$.}
+\end{figure}
+
 \item Define
 \begin{equation}
 \varphi_B (t) := \begin{cases}
 1, & t \in \left[0, \frac1B\right], \\
-\psi\left(1 - \frac{2B}{B-1} \left(t - \frac1B\right)\right), & t \in \left(\frac1B, 1\right), \\
-0, & t > 1.
+\psi\left(1 - \frac{2B}{B-1} \left(t - \frac1B\right)\right), & t \in
+\left(\frac1B, 1\right), \\ 0, & t > 1.
 \end{cases}
 \end{equation}
-for $B > 0$.
+for $B > 0$. The behavior of $\varphi_B (t)$ is shown in fig.~\ref{fig:phi}.
 
 \item Define the window function $b^2 (\cdot)$:
 \begin{equation}
 b^2 (\xi) = \varphi_B \left(\frac{\xi}B\right) - \varphi_B(\xi).
 \end{equation}
 \end{enumerate}
+
+Once $b^2 (\cdot)$ has been defined, the random needlets coefficients of a
+scalar field in the harmonic domain $\{a_{\ell m}\}_{\ell,m}$ is given by
+\begin{equation}
+\beta_{jk} = \sqrt{\lambda_{jk}} \sum_\ell b\left(\frac\ell{B^j}\right)
+\sum_{m=-\ell}^\ell a_{\ell m} Y_{\ell m} (\xi_{jk}),
+\end{equation}
+where $\{\xi_{jk}\}$ is a set of \emph{cubature points}, and it is usually
+taken to be the center of each pixel in an Healpix map.
+
+
+\section{Implementation of the mother needlet}
 
 A good place to start implementing \NeedlePy{} is to look for a cubic spline
 interpolation of $\psi(u)$ in eq.~\eqref{eq:psi}.  This kind of approximation
@@ -211,7 +227,7 @@ the whole $[-1,1]$ domain:
 
 <<Definition of [[psi]]>>=
 def psi(u):
-    neg_u = -np.abs (u)
+    neg_u = np.clip (-np.abs (u), -1.0, 0.0)
     value = scipy.interpolate.splev (neg_u, _PSI_SPLINE)
 
     if np.isscalar (u):
@@ -221,17 +237,15 @@ def psi(u):
 	    return value
     else:
 	u = np.array (u)  # Ensure that "u" is of the proper type
-	result = np.where (u > 0.0, 1 - value, value)
-
-	return result
+	return np.where (u > 0.0, 1 - value, value)
 @ %def psi
 
 \begin{figure}[tbf]
     \centering
     \includegraphics{psi_error.pdf}
-    \caption{\label{fig:psiError} Graph of $\tilde\psi (u) - \psi(u)$, i.e.\
-the error in our implementation of [[phi]] with respect to the integral
-definition of eq.~\ref{eq:psi}.}
+    \caption{\label{fig:psiError} Graph of $\tilde\psi(u) - \psi(u)$, i.e.\ the
+error in our spline interpolation with respect to a direct numerical estimate
+of the integral in eq.~\protect\ref{eq:psi}.}
 \end{figure}
 
 If we denote our spline estimator for $\psi$ as $\tilde\psi$, then
@@ -246,11 +260,15 @@ magnitude of the truncation of the numbers used to define [[_PSI_SPLINE]].
 We now define a test case which checks the correctness of the implementation of
 [[phi]]:
 <<Test cases>>=
-class TestPhi (unittest.TestCase):
+class TestPsi (unittest.TestCase):
     def test_notable_points (self):
 	self.assertAlmostEqual (psi (-1.0), 0.0)
 	self.assertAlmostEqual (psi ( 0.0), 0.5)
 	self.assertAlmostEqual (psi (+1.0), 1.0)
+
+    def test_boundaries (self):
+	self.assertAlmostEqual (psi (-1.0), psi (-1.1))
+	self.assertAlmostEqual (psi (+1.0), psi (+1.1))
 
     def test_vectorial (self):
 	u = [-1.0, 0.0, 1.0]
@@ -260,7 +278,49 @@ class TestPhi (unittest.TestCase):
 	u        = [-0.606531, -0.31831, 0.367879, 0.56419]
 	expected = [0.0663502, 0.245443, 0.790487, 0.912829]
 	self.assertTrue (np.allclose (psi (u), expected))
+@ %def TestPsi
+
+
+\subsection{Implementation of the window function}
+
+As for [[psi]], we use the [[numpy.clip]] function in the definition of [[phi]]
+to properly take care of the regions outside $[1/B, 1]$:
+<<Definition of [[phi]]>>=
+def phi (t, B):
+    invB = 1.0/B
+    # Ensure that "t" is of the correct type
+    if not np.isscalar (t): t = np.array (t)
+    val = np.clip (1 - 2*B/(B - 1) * (t - invB), -1.0, 1.0)
+    return psi (val)
+@ %def phi
+
+As we did with [[psi]], we define a test case for [[phi]] as well:
+<<Test cases>>=
+class TestPhi (unittest.TestCase):
+    def test_notable_points (self):
+	self.assertAlmostEqual (phi (0.0, 2.0), 1.0)
+	self.assertAlmostEqual (phi (0.5, 2.0), 1.0)
+	self.assertAlmostEqual (phi (1.0, 2.0), 0.0)
+
+	self.assertAlmostEqual (phi (0.0, 5.0), 1.0)
+	self.assertAlmostEqual (phi (0.2, 5.0), 1.0)
+	self.assertAlmostEqual (phi (1.0, 5.0), 0.0)
+
+    def test_boundaries (self):
+	self.assertAlmostEqual (phi (-0.1, 2.0), 1.0)
+	self.assertAlmostEqual (phi (-0.1, 4.0), 1.0)
+
+	self.assertAlmostEqual (phi (1.1, 2.0), 0.0)
+	self.assertAlmostEqual (phi (1.1, 4.0), 0.0)
+
+    def test_vectorial (self):
+	u = [0.0, 0.2, 1.0]
+	self.assertTrue (np.allclose (phi (u, 5.0), [1.0, 1.0, 0.0]))
 @ %def TestPhi
+Note that we do not check for ``sparse'' points as we did in [[TestPsi]], since
+we assume that the implementation of [[psi]] (upon which [[phi]] is based) has
+already passed all the tests.
+
 
 \section{The main program}
 
@@ -278,6 +338,7 @@ import sys
 <<Private definitions>>
 
 <<Definition of [[psi]]>>
+<<Definition of [[phi]]>>
 
 <<Test cases>>
 

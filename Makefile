@@ -1,6 +1,6 @@
 SOURCE_NW = needlepy.nw
 BIB_FILE = needlepy.bib
-IMAGES = psi.pdf psi_error.pdf
+IMAGES = psi.pdf psi_error.pdf phi.pdf
 
 .phony: all
 
