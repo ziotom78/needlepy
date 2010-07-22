@@ -202,6 +202,7 @@ means that in pixel space the equation can be written as
 \end{equation}
 where $\psi_{jk}$ are the needlet:
 \begin{equation}
+\label{eq:needletInPixelSpace}
 \psi_{jk} (\vers{\gamma}) = \sqrt{\lambda_{jk}} \sum_\ell
 b\left(\frac\ell{B^j}\right) \sum_{m = -\ell}^\ell Y_{lm}^* (\vers{\gamma})
 Y_{lm} (\xi_{jk}).
@@ -389,6 +390,32 @@ def window_function (u, B):
 
 \section{The needlet transformation}
 
+\subsection{Needlets in pixel space}
+
+The following function is a straightforward implementation of
+eq.~\eqref{eq:needletInPixelSpace}. Note that we employ the fact that the
+window function $b$ has support in $[1/B, B]$, so that $b(\ell/B^j)$ has
+support in $[B^{j-1}, B^{j+1}]$:
+<<Definition of [[needlet]]>>=
+def needlet (position, B, j, center = (0.0, 0.0)):
+    '''Return the value of a needlet at position=(theta, phi) relative to the
+    center of the needlet.'''
+
+    result = 0.0
+    for cur_l in xrange (min (int (np.floor (B**(j-1))) - 1, 0),
+			 int (np.ceil (B**(j+1))) + 2):
+	m_range = np.arange (-cur_l, cur_l + 1, dtype = 'int')
+	# Note the ordering of the angles in the parameters to "sph_harm"
+	ylm1 = scipy.special.sph_harm (m_range, cur_l, position[1], position[0])
+	ylm2 = scipy.special.sph_harm (m_range, cur_l, center[1],   center[0])
+	result = result + \
+		  np.real (np.sum (np.conj (ylm1) * ylm2) \
+			   * window_function (cur_l / B**j, B))
+    return result
+@ %def needlet
+
+\subsection{Transformation for a random spherical field}
+
 Using eq.~\eqref{eq:needletTransformation} and the HealPy function
 [[healpy.alm2signal]] we are now able to estimate the needlet transformation
 for a given Healpix map.
@@ -413,8 +440,16 @@ import sys
 <<Definition of [[psi]]>>
 <<Definition of [[phi]]>>
 <<Definition of [[window_function]]>>
+<<Definition of [[needlet]]>>
 
 <<Test cases>>
+
+B = 2.0
+j = 4
+sys.stderr.write ("Running the computation...\n")
+for theta in np.arange (-np.pi / 4.0, np.pi / 4.0 + 0.01, 0.01):
+    sys.stderr.write ("theta = %.2f\n" % theta)
+    sys.stdout.write ("%s %s\n" % (str (theta), str (needlet ((theta, 0.0), B, j))))
 
 if __name__ == "__main__":
     unittest.main ()
