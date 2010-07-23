@@ -108,7 +108,7 @@ localization properties mentioned above.
 needlets for CMB data analysis. Such approach rotates around the definition of a
 so-called \emph{window function} $b(\cdot)$, which allows to apply the needlet
 transformation directly in the harmonic space. Unfortunately, the window
-function $b^2(\cdot)$ is built using the non-analytic function $f(t)$, and it
+function $b(\cdot)$ is built using the non-analytic function $f(t)$, and it
 involves the calculation of non-algebraic integrals, and it therefore
 complicates any numerical implementation of the needlet concept.
 
@@ -132,31 +132,18 @@ Pad\'e\ approximants reduces the problem while however not completely curing it
 (tests were made up to the approximant $[15/13]_f (t)$ built around points $t =
 0$ and $t = \pm \frac12$).} over the interval $[-1, 1]$.
 
-\begin{figure}[tbf]
-    \centering
-    \includegraphics{psi.pdf}
-    \caption{\label{fig:psi} Graph of $\psi(u)$ (eq.~\ref{eq:psi}).}
-\end{figure}
-
 \item Define
 \begin{equation}
 \label{eq:psi}
 \psi (u) := \frac{\int_{-1}^u f(t)\,\ud t}{\int_{-1}^1 f(t)\,\ud t}.
 \end{equation}
-The fact that $\psi \in C^\infty$ derives from the same property for $f$. The
-behavior of $\psi(u)$ is shown in fig.~\ref{fig:psi}. Such function requires
-the evaluation of an integral which has no algebraic form. Therefore, numerical
-integration algorithms must be implemented. The denominator has the following
-value (truncated to 18 digits):
+The fact that $\psi \in C^\infty$ derives from the same property for $f$. Such
+function requires the evaluation of an integral which has no algebraic form.
+Therefore, numerical integration algorithms must be implemented. The
+denominator has the following value (truncated to 18 digits):
 \begin{equation}
 K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
 \end{equation}
-
-\begin{figure}
-    \centering
-    \includegraphics{phi.pdf}
-    \caption{\label{fig:phi} Graph of $\varphi_B (t)$.}
-\end{figure}
 
 \item Define
 \begin{equation}
@@ -167,15 +154,7 @@ K := \int_{-1}^1 f(t)\,\ud t = 0.443\,993\,816\,168\,079\,438.
 \left(\frac1B, 1\right), \\ 0, & t > 1.
 \end{cases}
 \end{equation}
-for $B > 0$. The behavior of $\varphi_B (t)$ is shown in fig.~\ref{fig:phi}.
-
-\begin{figure}
-    \centering
-    \includegraphics{b.pdf}
-    \caption{\label{fig:b} Graph of $b (\ell / B^j)$ for $j = 5$. The two plots
-refer to two different values of $B$: it is evident that such parameter makes
-$b$ ``pick'' different regions in the harmonic space.}
-\end{figure}
+for $B > 0$.
 
 \item Define the window function $b (\cdot)$ such that
 \begin{equation}
@@ -186,7 +165,7 @@ b^2 (\xi) := \varphi_B \left(\frac{\xi}B\right) - \varphi_B(\xi).
 
 Once $b (\cdot) = \sqrt{\bigl(b^2 (\cdot) \bigr)}$ (i.e.\ we take the plus
 sign) has been defined, the random needlets coefficients of a scalar field in
-the harmonic domain $\{a_{\ell m}\}_{\ell m}$ is given by
+the harmonic domain $\{a_{\ell m}\}_{\ell m}$ are given by
 \begin{equation}
 \label{eq:needletTransformation}
 \beta_{jk} = \sqrt{\lambda_{jk}} \sum_\ell b\left(\frac\ell{B^j}\right)
@@ -199,15 +178,6 @@ parameter, while $k$ is the pixel number, running from 0 to $12 \times
 \mathtt{NSIDE}^2 - 1$. The $\lambda_{jk}$ parameter is the normalization
 coefficient of the needlet and is usually taken to be equal to the number of
 pixels for the $k$-th component.
-
-\begin{figure}
-    \centering
-    \includegraphics{needlet-pixel-space.pdf}
-    \caption{\label{fig:needletPixelSpace} Graph of needlet $\varphi_{jk}$ ($B
-= 2.0$, $j = 7$) in pixel space as a function of the $\theta$ angle from the
-cubic point $\xi_{jk}$. Note the good localization in space: this property
-motivates the name ``needlet''.}
-\end{figure}
 
 Eq.~\eqref{eq:needletTransformation} is the convolution of a spherical field
 $T$ (represented by the set of $a_{\ell m}$) with the window function. This
@@ -223,8 +193,9 @@ where $\psi_{jk}$ is the needlet:
 b\left(\frac\ell{B^j}\right) \sum_{m = -\ell}^\ell Y_{lm}^* (\vers{\gamma})
 Y_{lm} (\xi_{jk}).
 \end{equation}
-The graphical representation of a needlet is shown in
-fig.~\ref{fig:needletPixelSpace}.
+
+In the following sections we are going to define Python functions for each of
+these functions.
 
 
 \section{Numerical implementation of the base functions}
@@ -240,7 +211,7 @@ instead of functions involving exponentials. We shall use the fact that
 \label{eq:psiParity}
 \psi (u) = 1 - \psi (-u) \quad \text{for $u > 0$}
 \end{equation}
-to limit the domain where to look for the interpolation.
+to limit the domain where to look for the interpolation to $[-1, 0]$.
 
 We use Wolfram Mathematica's \texttt{NIntegrate} to calculate the value of
 $\psi(u)$ over an uniform set of points in $[-1 - \varepsilon, 0 +
@@ -347,6 +318,26 @@ class TestPsi (unittest.TestCase):
 	self.assertTrue (np.allclose (psi (u), expected))
 @ %def TestPsi
 
+\begin{figure}[tbf]
+    \centering
+    \includegraphics{psi.pdf}
+    \caption{\label{fig:psi} Graph of $\psi(u)$ (eq.~\ref{eq:psi}) as
+calculated by \texttt{psi}.}
+\end{figure}
+
+To have a visual check of our implementation of [[psi]], we define a small
+program which writes the points of the curve into a file. Such file has been
+used to produce fig.~\ref{fig:psi}.
+<<test-psi.py>>=
+#!/usr/bin/env python
+
+import numpy as np
+import needlepy
+
+EPSILON = 0.01
+for x in np.arange (-1.0, 1.0 + EPSILON, EPSILON):
+    print "%.2f %.6f" % (x, needlepy.psi (x))
+@
 
 \subsection{Estimation of $\varphi$}
 
@@ -363,7 +354,7 @@ def phi (t, B):
     return psi (val)
 @ %def phi
 
-As we did with [[psi]], we define a test case for [[phi]] as well:
+As we did with [[psi]], we define a test case for [[phi]]\ as well:
 <<Test cases>>=
 class TestPhi (unittest.TestCase):
     def test_notable_points (self):
@@ -396,6 +387,26 @@ Note that we do not check for ``sparse'' points as we did in [[TestPsi]], since
 we assume that the implementation of [[psi]]\ (upon which [[phi]]\ is based)
 has already passed all the tests.
 
+We provide a program which tabulates the values of $\varphi_B (t)$ for a range
+of values for $t$:
+<<test-phi.py>>=
+#!/usr/bin/env python
+
+import numpy as np
+import needlepy
+
+B = 3.0
+EPSILON = 0.05
+for u in np.arange (0.0, 1.0 + EPSILON, EPSILON):
+    print "%.3f %.5f" % (u, needlepy.phi (u, B))
+@
+
+\begin{figure}
+    \centering
+    \includegraphics{phi.pdf}
+    \caption{\label{fig:phi} Graph of $\varphi_B (t)$.}
+\end{figure}
+
 
 \subsection{Estimation of the window function}
 
@@ -405,6 +416,33 @@ After having implemented [[phi]], the implementation of [[window_function]]
 def window_function (u, B):
     return np.sqrt (np.clip (phi (u / B, B) - phi (u, B), 0.0, 5.0))
 @ %def window_function
+
+\begin{figure}
+    \centering
+    \includegraphics{b.pdf}
+    \caption{\label{fig:b} Graph of $b (\ell / B^j)$ for $j = 5$. The two plots
+refer to two different values of $B$: it is evident that such parameter makes
+$b$ ``pick'' different regions in the harmonic space.}
+\end{figure}
+
+As usual, we provide a small program that tabulates the values of this
+function:
+<<test-b.py>>=
+#!/usr/bin/env python
+
+import numpy as np
+import needlepy
+
+j = 5
+EPSILON = 0.05
+for l in xrange (500):
+    val = lambda x, B : x / (B**j)
+    print "%d %.5f %.5f" % (l,
+			    needlepy.window_function (val (l, 2.72), 2.72),
+			    needlepy.window_function (val (l, 2.50), 2.50))
+@
+Fig.~\ref{fig:b} shows the two needlets (with $B = 2.72$ and $B = 2.50$)
+calculated by this program.
 
 
 \section{The needlet transformation}
@@ -420,7 +458,7 @@ def needlet (pos, B, j, center = (0.0, 0.0)):
 
     <<Initialize variables for the calculation of the needlet>>
     <<Cycle over $\ell$ and calculate the Legendre polynomials>>
-    <<Compute the needlet and return the result>>=
+    <<Compute the needlet and return the result>>
 @ %def needlet
 
 Eq.~\eqref{eq:needletInPixelSpace} typically involves a summation over a wide
@@ -441,7 +479,7 @@ We initialize the [[cos_gamma]]\ constant according to this formula:
 <<Initialize variables for the calculation of the needlet>>=
 cos_gamma = np.cos (center[0]) * np.cos (pos[0]) \
 	    + (np.sin (center[0]) * np.sin (pos[0]) \
-	       * np.cos (center[1] - pos[1])
+	       * np.cos (center[1] - pos[1]))
 @
 
 Since the window function $b$ has support in $[1/B, B]$, it follows that
@@ -460,10 +498,12 @@ end_l   = int (np.ceil (B**(j+1)))
 Next, using the recurrence relation\footnote{The reader might ask why we have
 not used [[scipy.special.legendre]] instead of implementing our own code for
 calculating $P_\ell (x)$. We discovered that such function leads to wrong
-results for big values of $\ell$ ($\ell \gtrsim 100$). We have therefore
-decided to use here the same recurrence relation implemented by the GNU
-Scientific Library (GSL) in [[gsl_sf_legendre_Pl]], which worls for $\ell \leq
-100\,000$.}
+results for big values of $\ell$ ($\ell \gtrsim 100$) --- the function does not
+return the value of the polynomial at one specific point, but instead the
+coefficients of the polinomial, whose magnitude grows quite fast and therefore
+produce NaNs for high values of $\ell$. We have therefore decided to use here
+the same recurrence relation implemented by the GNU Scientific Library (GSL) in
+[[gsl_sf_legendre_Pl]], which works for $\ell \leq 100\,000$.}
 \begin{equation}
 (\ell + 1) P_l (x) = (2\ell + 1) x P_{\ell - 1} (x) - \ell P_{\ell - 2} (x),
 \end{equation}
@@ -492,12 +532,37 @@ l_range   = l_range  [start_l:end_l+1]
 return np.sum (window_function (l_range / (B**j), B) * pl_values)
 @
 
+\begin{figure}
+    \centering
+    \includegraphics{needlet.pdf}
+    \caption{\label{fig:needletPixelSpace} Graph of needlet $\varphi_{jk}$ ($B
+= 2.0$, $j = 7$) in pixel space as a function of the $\theta$ angle from the
+cubic point $\xi_{jk}$. Note the good localization in space: this property
+motivates the name ``needlet'' for these mathematical objects.}
+\end{figure}
+
+The following function computes the profile of a needlet with $B = 2.0$ and $j = 7$:
+<<test-needlet.py>>=
+#!/usr/bin/env python
+
+import numpy as np
+import needlepy
+
+B = 2.0
+j = 7
+
+EPSILON = 0.0025
+normalization = needlepy.needlet ((0.0, 0.0), B, j)
+for theta in np.arange (-np.pi / 8.0, np.pi / 8.0 + EPSILON, EPSILON):
+    print theta, \
+	needlepy.needlet ((theta, 0.0), B, j) / normalization
+@ The result is shown in fig.~\ref{fig:needletPixelSpace}.
 
 \subsection{Transformation for a random spherical field}
 
 Using eq.~\eqref{eq:needletTransformation} and function [[healpy.alm2signal]]\
 we are now able to estimate the needlet transformation
-for a given Healpix map.
+for a given Healpix map [TODO].
 
 
 \section{The main program}
@@ -505,7 +570,7 @@ for a given Healpix map.
 This is the incarnation of the main program. It is used to test the goodness of
 the implementation by means of a number of unit tests:
 
-<<*>>=
+<<needlepy.py>>=
 #!/usr/bin/env python
 
 import numpy as np
@@ -517,13 +582,6 @@ import sys
 <<Private definitions>>
 <<Function definitions>>
 <<Test cases>>
-
-B = 2.0
-j = 7
-sys.stderr.write ("Running the computation...\n")
-for theta in np.arange (-np.pi / 8.0, np.pi / 8.0 + 0.0025, 0.0025):
-    sys.stderr.write ("theta = %.2f\n" % theta)
-    sys.stdout.write ("%s %s\n" % (str (theta), str (needlet ((theta, 0.0), B, j) / needlet ((0.0, 0.0), B, j))))
 
 if __name__ == "__main__":
     unittest.main ()

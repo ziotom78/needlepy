@@ -105,7 +105,7 @@ ticklabel labelfrac=labelfrac();
 
 size (10cm, 5cm, IgnoreAspect);
 
-file in = input ("needlet-pixel-space.txt").line ();
+file in = input ("needlet.txt").line ();
 real[][] a = in.dimension (0, 0);
 a = transpose (a);
 
