@@ -125,7 +125,10 @@ f(t) := \begin{cases}
 \end{equation}
 Note that $f$ is $C^\infty$, but it is not analytic around points $t = \pm 1$,
 because $f^{(n)} (\pm 1) = 0\ \forall n$. Therefore, such function cannot be
-approximated by Taylor series over the interval $[-1, 1]$.
+approximated easily using Taylor series\footnote{The usage of
+Pad\'e\ approximants reduces the problem while however not completely curing it
+(tests were made up to the approximant $[15/13]_f (t)$ built around points $t =
+0$ and $t = \pm \frac12$).} over the interval $[-1, 1]$.
 
 \begin{figure}[tbf]
     \centering
