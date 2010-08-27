@@ -1,0 +1,24 @@
+README for NeedlePy
+===================
+
+Introduction
+------------
+NeedlePy is a Python library using http://numpy.scipy.org/[NumPy] to implement
+a fast needlet transform. It has been written by Maurizio Tomasi using a
+http://www.literateprogramming.com/[literate programming] approach and the
+http://www.cs.tufts.edu/~nr/noweb/[Noweb tool].
+
+Supported platforms
+-------------------
+
+NeedlePy has been developed on Mac OS X 10.5 and 10.6, but it can be run also
+on Linux (and probably any other Unix machine). I am happy to implement patches
+that allow the library to be used on other systems as well.
+
+Installation
+------------
+You have to create the `needlepy.py` file from the Noweb sources in order to
+use the library. This can be done by running `make` (or `gmake`, depending on
+your platform). Once you have created the file, copy it in any of the
+directories referenced by your environment variable `PYTHONPATH`.
+
