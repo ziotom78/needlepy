@@ -475,7 +475,7 @@ where $P_l$ is the $l$-th Legendre polynomial, and
 \cos\gamma = \cos\theta_1 \cos\theta_2
 + \sin\theta_1 \sin\theta_2 \cos(\varphi_1 - \varphi_2).
 \]
-We initialize the [[cos_gamma]]\ constant according to this formula:
+We use such formula to initialize the [[cos_gamma]]\ constant:
 <<Initialize variables for the calculation of the needlet>>=
 cos_gamma = np.cos (center[0]) * np.cos (pos[0]) \
 	    + (np.sin (center[0]) * np.sin (pos[0]) \
@@ -494,7 +494,6 @@ rounding operations respectively:
 start_l = int (np.floor (B**(j-1)))
 end_l   = int (np.ceil (B**(j+1)))
 @
-
 Next, using the recurrence relation\footnote{The reader might ask why we have
 not used [[scipy.special.legendre]] instead of implementing our own code for
 calculating $P_\ell (x)$. We discovered that such function leads to wrong
@@ -508,7 +507,7 @@ the same recurrence relation implemented by the GNU Scientific Library (GSL) in
 (\ell + 1) P_l (x) = (2\ell + 1) x P_{\ell - 1} (x) - \ell P_{\ell - 2} (x),
 \end{equation}
 we create the array [[pl_values]]\ which will contain the set $\{P_\ell
-(\cos\gamma)\}$ for $\ell = 0\ldots \mathtt{end_l}$:
+(\cos\gamma)\}$ for $\ell = 0\ldots \mathtt{end\_l}$:
 <<Cycle over $\ell$ and calculate the Legendre polynomials>>=
 pl_values = np.zeros (end_l + 1)
 pl_values[0] = 1.0
@@ -517,7 +516,6 @@ for cur_l in xrange (2, end_l + 1):
     pl_values[cur_l] = ((cos_gamma * (2 * cur_l - 1) * pl_values[cur_l - 1] \
 			   - (cur_l - 1) * pl_values[cur_l - 2])) / cur_l
 @
-
 Since eq.~\eqref{eq:LegendreAndSphHarmonics} involves a $(2\ell + 1)/4\pi$
 factor, we must rescale [[pl_values]]\ accordingly:
 <<Cycle over $\ell$ and calculate the Legendre polynomials>>=
@@ -525,7 +523,7 @@ l_range = np.arange (0, end_l + 1, dtype = 'float')
 pl_values = pl_values * (l_range * 2.0 + 1) / (4.0 * np.pi)
 @
 
-Finally, we can compute the result of the function:
+Finally, we can compute the needlet:
 <<Compute the needlet and return the result>>=
 pl_values = pl_values[start_l:end_l+1]
 l_range   = l_range  [start_l:end_l+1]
