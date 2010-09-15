@@ -176,8 +176,11 @@ taken to be the center of each pixel in an Healpix map. When working with
 Healpix maps, the $j$ index conventionally refers to a given \texttt{NSIDE}
 parameter, while $k$ is the pixel number, running from 0 to $12 \times
 \mathtt{NSIDE}^2 - 1$. The $\lambda_{jk}$ parameter is the normalization
-coefficient of the needlet and is usually taken to be equal to the number of
-pixels for the $k$-th component.
+coefficient of the needlet and is equal to
+\begin{equation}
+\lambda_{jk} = \lambda_j = \frac{4\pi}{N_j}
+\end{equation}
+for Healpix maps \citep{2010ScodellerMexicanNeedlets}.
 
 Eq.~\eqref{eq:needletTransformation} is the convolution of a spherical field
 $T$ (represented by the set of $a_{\ell m}$) with the window function. This
