@@ -138,6 +138,7 @@ library\footnote{\url{http://code.google.com/p/python-nose/}}
 import numpy as np
 import scipy.interpolate
 import scipy.special
+from scipy.misc import comb as binomial
 import unittest
 import sys
 
@@ -669,7 +670,8 @@ Bernstein needlets are based on Bernstein's polynomials\footnote{See
 have been used by Bernstein to provide a constructive proof of Weierstra\ss'
 approximation theorem. } $B_i^{(n)}$:
 \begin{equation}
-B_i^{(n)} (t) = \begin{pmatrix} n \\ i \end{pmatrix} t^i (1 - t)^{n - 1},
+\label{eq:BernsteinPoly}
+B_i^{(n)} (t) = \begin{pmatrix} n \\ i \end{pmatrix} t^i (1 - t)^{n - i},
 \end{equation}
 where $t \in [0, 1]$. Such polynomials provide an alternate form for the
 $\varphi(t)$ function in eq.~\eqref{eq:phi} which is no longer infinitely
@@ -678,7 +680,8 @@ differentiable.  The construction of such needlets is given in Appendix B of
 \begin{enumerate}
 \item For a given $k$, define the polynomial
 \begin{equation}
-p_{2k+1} (u) = \sum_{i = 0}^k B_i^{(2k + 1)} (u).
+\label{eq:BernsteinP}
+p_{2k+1} (u) = \sum_{i = 0}^k B_i^{(2k + 1 - i)} (u).
 \end{equation}
 
 \item Define the function
@@ -701,14 +704,62 @@ Note the similarity with eq.~\eqref{eq:b}
 \end{enumerate}
 
 Since they share many properties with standard needlets, we use
-[[StandardNeedlet]] as the base class of [[BernsteinNeedlet]].
-
+[[StandardNeedlet]] as the base class of [[BernsteinNeedlet]]:
 <<Definition of the [[BernsteinNeedlet]] class>>=
 class BernsteinNeedlet (StandardNeedlet):
+    <<[[BernsteinNeedlet]]'s constructor>>
+    <<[[BernsteinNeedlet]]'s estimation of p>>
     <<[[BernsteinNeedlet]]'s estimation of phi>>
     <<[[BernsteinNeedlet]]'s estimation of the window function>>
-    _DUMMY = 0
 @ %def BernsteinNeedlet
+
+Since $k$ is a ``fixed'' parameter that is used extensively by each quantity
+used to define the needlet, it must be specified in the constructor. We choose
+a reasonable default for it. The constructor pre-calculates all the binomial
+coefficients used in eq.~\eqref{eq:BernsteinP}, and store them in
+[[self.binomials]]:
+<<[[BernsteinNeedlet]]'s constructor>>=
+def __init__ (self, k = 5):
+    self.k = k
+
+    self.binomials = np.arange (self.k + 1, dtype = 'int64')
+    for i in xrange (0, k + 1):
+	self.binomials[i] = binomial (2 * self.k + 1, i, exact = True)
+@ %def BernsteinNeedlet.__init__
+
+We define a generic ancestor for the unit test classes related to
+[[BernsteinNeedlet]]:
+<<Definition of test cases>>=
+class BernsteinNeedletBaseTestCase (unittest.TestCase):
+    def setUp (self):
+	self.needlet = BernsteinNeedlet (4)
+@ %def BernsteinNeedletBaseTestCase
+
+The definition of $p_{2k+1} (t)$ (eq.~\ref{eq:BernsteinP}) is straightforward:
+<<[[BernsteinNeedlet]]'s estimation of p>>=
+def p (self, t):
+    i = np.arange (self.k + 1, dtype = 'int')
+    return np.sum (self.binomials * (t ** i) * ((1 - t) ** (2 * self.k + 1 - i)))
+@ %def BernsteinNeedlet.p
+
+The test case associated with [[BernsteinNeedlet.p]] is given here:
+<<Definition of test cases>>=
+class BernsteinNeedletPTestCase (BernsteinNeedletBaseTestCase):
+    def testBinomials (self):
+	self.assertEqual (len (self.needlet.binomials), 5)
+	self.assertEqual (self.needlet.binomials[0], 1)
+	self.assertEqual (self.needlet.binomials[1], 9)
+	self.assertEqual (self.needlet.binomials[2], 36)
+	self.assertEqual (self.needlet.binomials[3], 84)
+	self.assertEqual (self.needlet.binomials[4], 126)
+
+    def testP (self):
+	self.assertAlmostEqual (self.needlet.p (0.00), 1.0)
+	self.assertAlmostEqual (self.needlet.p (1.00), 0.0)
+	self.assertAlmostEqual (self.needlet.p (0.25), 0.9510726929)
+	self.assertAlmostEqual (self.needlet.p (0.50), 0.5000000000)
+	self.assertAlmostEqual (self.needlet.p (0.75), 0.0489273071)
+@
 
 \appendix
 
