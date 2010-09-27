@@ -1,0 +1,162 @@
+% -*- mode: Noweb; noweb-code-mode: python-mode -*-
+
+\section{Bernstein needlets}
+
+Bernstein's needlets have been introduced as a modification of standard
+needlets which allow a finer control on their localization on the real space,
+at the price of having a function which is no longer infinitely differentiable. 
+
+Bernstein needlets are based on Bernstein's polynomials\footnote{See
+\url{http://mathworld.wolfram.com/BernsteinPolynomial.html}. Such polynomials
+have been used by Bernstein to provide a constructive proof of Weierstra\ss'
+approximation theorem. } $B_i^{(n)}$:
+\begin{equation}
+\label{eq:BernsteinPoly}
+B_i^{(n)} (t) = \begin{pmatrix} n \\ i \end{pmatrix} t^i (1 - t)^{n - i},
+\end{equation}
+where $t \in [0, 1]$. Such polynomials provide an alternate form for the
+$\varphi(t)$ function in eq.~\eqref{eq:phi} which is no longer infinitely
+differentiable.  The construction of such needlets is given in Appendix B of
+\citet{2010ScodellerMexicanNeedlets}:
+\begin{enumerate}
+\item For a given integer $k > 0$, define the polynomial
+\begin{equation}
+\label{eq:BernsteinP}
+p_{2k+1} (u) = \sum_{i = 0}^k B_i^{(2k + 1 - i)} (u).
+\end{equation}
+Table~\ref{tbl:BernsteinP} show some examples of these polynomials.
+
+\begin{table}[tbf]
+    \centering
+    \begin{tabular}{ll}
+    $k$ & $p_{2k + 1} (t)$ \\
+    \hline
+    0 & $1 - t$ \\
+    1 & $(1 - t)^3 + 3 t (1 - t)^2$ \\
+    2 & $(1 - t)^5 + 5 t (1 - t)^4 + 10 t^2 (1 - t)^3$ \\
+    3 & $(1 - t)^7 + 7 t (1 - t)^6 + 21 t^2 (1 - t)^5 + 35 t^3 (1 - t)^4$ \\
+    4 & $(1 - t)^9 + 9 t (1 - t)^8 + 36 t^2 (1 - t)^7 + 84 t^3 (1 - t)^6 + 126 t^4 (1 - t)^5$ \\
+    \hline
+    \end{tabular}
+    \caption{\label{tbl:BernsteinP} Table of $p_{2k + 1}(t)$ for $k = 0\ldots
+4$. Each polynomial satisfies the following properties: (1) $p_{2k + 1} (0) =
+1$, (2) $(p_{2k + 1} (1) = 0$, (3) within $[0, 1]$ it is a decreasing
+function. They are used to provide a polynomial alternative to the
+$\varphi(\cdot)$ function of eq.~\protect\eqref{eq:phi}.}
+\end{table}
+
+\item Define the function
+\begin{equation}
+\label{eq:BernsteinPhi}
+\varphi (t) = \begin{cases}
+1, & t \in \left[0, \frac1B\right], \\
+p_{2k+1} \left(\frac{t - 1/B}{B - 1/B}\right), & t \in
+\left(\frac1B, B\right), \\ 0, & t > B.
+\end{cases}
+\end{equation}
+
+\item The window function $b(\cdot)$ is given by
+\begin{equation}
+b (\xi) = \begin{cases}
+\sqrt{\varphi\left(\frac{\xi}B\right) - \varphi(\xi)}, & \frac1B \leq \xi \leq B, \\
+0, & \mathrm{otherwise}.
+\end{cases}
+\end{equation}
+Note the similarity with eq.~\eqref{eq:b}
+\end{enumerate}
+
+Since they share many properties with standard needlets, we use
+[[StandardNeedlet]] as the base class of [[BernsteinNeedlet]]:
+<<Definition of the [[BernsteinNeedlet]] class>>=
+class BernsteinNeedlet (StandardNeedlet):
+    <<[[BernsteinNeedlet]]'s constructor>>
+    <<[[BernsteinNeedlet]]'s estimation of p>>
+    <<[[BernsteinNeedlet]]'s estimation of phi>>
+    <<[[BernsteinNeedlet]]'s estimation of the window function>>
+@ %def BernsteinNeedlet
+
+Since $k$ is a ``fixed'' parameter that is used extensively by each quantity
+used to define the needlet, it must be specified in the constructor. We choose
+a reasonable default for it. The constructor pre-calculates all the binomial
+coefficients used in eq.~\eqref{eq:BernsteinP}, and store them in
+[[self.binomials]]:
+<<[[BernsteinNeedlet]]'s constructor>>=
+def __init__ (self, k = 5):
+    self.k = k
+
+    self.binomials = np.arange (self.k + 1, dtype = 'int64')
+    for i in xrange (0, k + 1):
+	self.binomials[i] = binomial (2 * self.k + 1, i, exact = True)
+@ %def BernsteinNeedlet.__init__
+
+We define a generic ancestor for the unit test classes related to
+[[BernsteinNeedlet]], where the constructor is called with $k = 4$:
+<<Definition of test cases>>=
+class BernsteinNeedletBaseTestCase (unittest.TestCase):
+    def setUp (self):
+	self.needlet = BernsteinNeedlet (4)
+@ %def BernsteinNeedletBaseTestCase
+
+The first test case checks that [[BernsteinNeedlet]]'s constructur has properly
+initialized the binomial coefficients (remember that $k = 4$):
+<<Definition of test cases>>=
+class BernsteinNeedletInitTestCase (BernsteinNeedletBaseTestCase):
+    def test_binomials (self):
+	self.assertEqual (len (self.needlet.binomials), 5)
+	self.assertEqual (self.needlet.binomials[0], 1)
+	self.assertEqual (self.needlet.binomials[1], 9)
+	self.assertEqual (self.needlet.binomials[2], 36)
+	self.assertEqual (self.needlet.binomials[3], 84)
+	self.assertEqual (self.needlet.binomials[4], 126)
+@
+
+The definition of $p_{2k+1} (t)$ (eq.~\ref{eq:BernsteinP}) is straightforward
+to implement. There is only one trick: the most natural implementation using
+\texttt{numpy} would be to use \texttt{numpy.sum} to sum all the $k+1$
+polynomials. However, this would complicate the use of vectors in the \texttt{t}
+argument (we should use \emph{broadcasting} to fully take advantage of
+\texttt{numpy}'s speed). But since Bernstein needlets usually have $k \lesssim
+10$, which means that the number of polynomials to sum is the same (plus one),
+we implement an explicit \texttt{for} over the $i$ variable without sacrificing
+too much the speed of the code:
+<<[[BernsteinNeedlet]]'s estimation of p>>=
+def p (self, t):
+    # Ensure that t is of the correct type
+    if not np.isscalar (t): t = np.array (t)
+    one_minus_t = 1.0 - t
+    result = 0.0
+    for i in xrange (0, self.k + 1):
+	result = result + \
+	    (self.binomials[i] \
+	     * (t ** i) \
+	     * (one_minus_t ** (2 * self.k + 1 - i)))
+
+    return result
+@ %def BernsteinNeedlet.p
+
+The test case associated with [[BernsteinNeedlet.p]] is given here:
+<<Definition of test cases>>=
+class BernsteinNeedletPTestCase (BernsteinNeedletBaseTestCase):
+    def test_p (self):
+	self.assertAlmostEqual (self.needlet.p (0.00), 1.0)
+	self.assertAlmostEqual (self.needlet.p (1.00), 0.0)
+        self.assertAlmostEqual (self.needlet.p (1./4.), 124659./131072.)
+        self.assertAlmostEqual (self.needlet.p (1./2.), 1./2.)
+        self.assertAlmostEqual (self.needlet.p (3./4.), 6413./131072.)
+
+    def test_vectorial (self):
+	t   = np.array ([0, 1./4., 1./2., 3./4., 1.0])
+	res = np.array ([1.0, 124659./131072., 1./2., 6413./131072., 0.0])
+	self.assertTrue (np.allclose (res, self.needlet.p (t)))
+@
+
+Here we provide our implementation for $\varphi$. Instead of using an
+\texttt{if} for the three cases in eq.~\eqref{eq:BernsteinPhi}, we ``clip'' the
+values of $t$ which fall outside $[0, 1]$ using \texttt{numpy.clip} (this is
+much faster):
+<<[[BernsteinNeedlet]]'s estimation of phi>>=
+def phi (self, t):
+    # Ensure that "t" is of the correct type
+    if not np.isscalar (t): t = np.array (t)
+    return self.p ((np.clip (t, 0.0, 1.0) - 1/B) / (B - 1/B))
+@
