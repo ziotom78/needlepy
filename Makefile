@@ -11,6 +11,7 @@ IMAGES = psi.pdf psi_error.pdf phi.pdf b.pdf needlet.pdf
 all: needlepy.pdf needlepy.py $(PY_TEST_FILES)
 
 needlepy.pdf: $(TEX_FILES) $(BIB_FILE) $(IMAGES)
+	pdflatex -interaction=batchmode $<
 	noindex $<
 	texi2pdf --batch --pdf $<
 
