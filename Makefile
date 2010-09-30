@@ -6,7 +6,7 @@ INDEX_FILE = all.defs
 PY_TEST_FILES = test-psi.py test-phi.py test-b.py test-needlet.py
 IMAGES = psi.pdf psi_error.pdf phi.pdf b.pdf needlet.pdf
 
-.phony: all
+.PHONY: all
 
 all: needlepy.pdf needlepy.py $(PY_TEST_FILES)
 
@@ -28,7 +28,7 @@ needlet.pdf: needlet.asy needlet.txt
 	asy -f pdf -o $@ $<
 
 $(INDEX_FILE): $(DEFS_FILES)
-	sort -u $? | cpif $@
+	sort -u $^ | cpif $@
 
 %.tex: %.nw $(INDEX_FILE)
 	noweave -n -delay -indexfrom $(INDEX_FILE) $< | cpif $@
@@ -37,7 +37,7 @@ $(INDEX_FILE): $(DEFS_FILES)
 	nodefs $< | cpif $@
 
 needlepy.py: $(SOURCE_NW)
-	notangle -R$@ $? | cpif $@
+	notangle -R$@ $^ | cpif $@
 
 %.txt: test-%.py needlepy.py
 	python $< | cpif $@
