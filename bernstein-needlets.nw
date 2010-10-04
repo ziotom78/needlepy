@@ -3,8 +3,9 @@
 \section{Bernstein needlets}
 
 Bernstein's needlets have been introduced as a modification of standard
-needlets which allow a finer control on their localization on the real space,
-at the price of having a function which is no longer infinitely differentiable. 
+needlets which allow a finer control on their localization on the real space
+(via an integer parameter $k$), at the price of having a function which is no
+longer infinitely differentiable. 
 
 Bernstein needlets are based on Bernstein's polynomials\footnote{See
 \url{http://mathworld.wolfram.com/BernsteinPolynomial.html}. Such polynomials
@@ -69,6 +70,9 @@ Since they share many properties with standard needlets, we use
 [[StandardNeedlet]] as the base class of [[BernsteinNeedlet]]:
 <<Definition of the [[BernsteinNeedlet]] class>>=
 class BernsteinNeedlet (StandardNeedlet):
+    """A needlet built using Bernstein polynomials.
+
+    This class implements the needlets defined by Scodeller et al. (2010)."""
     <<[[BernsteinNeedlet]]'s constructor>>
     <<[[BernsteinNeedlet]]'s estimation of p>>
     <<[[BernsteinNeedlet]]'s estimation of phi>>

@@ -95,6 +95,11 @@ Therefore, the [[StandardNeedlet]] class must contain definitions for the
 following methods:
 <<Definition of the [[StandardNeedlet]] class>>=
 class StandardNeedlet (Needlet):
+    """A standard needlet.
+
+    This class implements the needlets defined by Pietrobon et al. (2006) and
+    Marinucci et al. (2008)."""
+
     <<[[StandardNeedlet]]'s estimation of psi>>
     <<[[StandardNeedlet]]'s estimation of phi>>
     <<[[StandardNeedlet]]'s estimation of the window function>>
@@ -108,6 +113,7 @@ classes\footnote{See
 [[StandardNeedlet]]:
 <<Definition of test cases>>=
 class StandardNeedletBaseTestCase (unittest.TestCase):
+    "Base class used to implement the test cases for StandardNeedlet."
     def setUp (self):
 	self.needlet = StandardNeedlet ()
 @ %def StandardNeedletBaseTestCase
@@ -173,13 +179,18 @@ _PSI_SPLINE = scipy.interpolate.splrep ( \
 	        4.58606108e-01,   4.66874931e-01,   4.75150394e-01,
 	        4.83430833e-01,   4.91714588e-01,   5.00000000e-01,
 	        5.08285412e-01]))
-@ %def _PSI_SPLINE
+@ %def StandardNeedlet._PSI_SPLINE
 
 Then, we use this spline and eq.~\eqref{eq:psiParity} to define [[psi]]\ over
 the whole $[-1,1]$ domain:
 
 <<[[StandardNeedlet]]'s estimation of psi>>=
 def psi (self, u):
+    """Estimate the psi function.
+
+    "Psi" is the name of a function defined in the article by Marinucci et al.
+    (2008) that is used to build the actual needlet."""
+
     neg_u = np.clip (-np.abs (u), -1.0, 0.0)
     value = scipy.interpolate.splev (neg_u, self._PSI_SPLINE)
 
@@ -215,6 +226,8 @@ We now define a test case which checks the correctness of the implementation of
 
 <<Definition of test cases>>=
 class TestStandardNeedletPsi (StandardNeedletBaseTestCase):
+    "Class to test the implementation of StandardNeedlet.psi."
+
     def test_notable_points (self):
 	self.assertAlmostEqual (self.needlet.psi (-1.0), 0.0)
 	self.assertAlmostEqual (self.needlet.psi ( 0.0), 0.5)
@@ -264,6 +277,11 @@ outside
 $[1/B, 1]$:
 <<[[StandardNeedlet]]'s estimation of phi>>=
 def phi (self, t, B):
+    """Estimate the phi function.
+
+    "Phi" is the name of a function defined in the article by Marinucci et al.
+    (2008) that is used to build the actual needlet."""
+    
     invB = 1.0/B
     # Ensure that "t" is of the correct type
     if not np.isscalar (t): t = np.array (t)
@@ -274,6 +292,7 @@ def phi (self, t, B):
 As we did with [[psi]], we define a test case for [[phi]]\ as well:
 <<Definition of test cases>>=
 class TestStandardNeedletPhi (StandardNeedletBaseTestCase):
+    "Class to test the implementation of StandardNeedlet.phi."
     def test_notable_points (self):
 	self.assertAlmostEqual (self.needlet.phi (0.0, 2.0), 1.0)
 	self.assertAlmostEqual (self.needlet.phi (0.5, 2.0), 1.0)
@@ -460,6 +479,7 @@ The following test case checks for the correct implementation of the
 [[needlet]] function:
 <<Definition of test cases>>=
 class TestStandardNeedletRealSpace (StandardNeedletBaseTestCase):
+    "Class to test the implementation of StandardNeedlet.real_space."
     def test_sign (self):
 	B = 1.78
 	j = 4

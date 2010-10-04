@@ -194,6 +194,11 @@ all the needlet basis implemented by the library. The definition of the class
 implements a number of empty methods:
 <<Definition of the [[Needlet]] class>>=
 class Needlet:
+    """Base class for needlet transformations.
+
+    This is a base class which is used as an ancestor by other specialized
+    classes (StandardNeedlet, BernsteinNeedlet, MexicanNeedlet)."""
+
     def __init__ (self):
 	pass
 
