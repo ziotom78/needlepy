@@ -8,6 +8,12 @@ a fast needlet transform. It has been written by Maurizio Tomasi using a
 http://www.literateprogramming.com/[literate programming] approach and the
 http://www.cs.tufts.edu/~nr/noweb/[Noweb tool].
 
+License
+-------
+NeedlePy is released under a liberal BSD license (the same license used by
+http://numpy.scipy.org/[NumPy] and http://www.scipy.org/[SciPy]). See the file
+`LICENSE` for the full license.
+
 Supported platforms
 -------------------
 
