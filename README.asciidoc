@@ -1,6 +1,8 @@
 README for NeedlePy
 ===================
 
+**Warning**: This repository is currently archived.
+
 Introduction
 ------------
 NeedlePy is a Python library using http://numpy.scipy.org/[NumPy] to implement
